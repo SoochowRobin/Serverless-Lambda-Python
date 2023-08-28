@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  order-api
+
+  One gateway trigger two different Lambda function by using POST, GET HTTP method.
+
+# global variables
+Globals:
+  Function:
+    Runtime: python3.9
+    Timeout: 30
+    Environment:
+      Variables:
+        ORDERS_TABLE: !Ref OrdersTable
+
+Resources:
+  # DDB definition
+  OrdersTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: Number
+
+  #Lambda definition
+  CreateOrderFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: order_api/
+      Handler: create.lambda_handler
+
+      Events: # We use EVENTS to tell SAMs to configure API Gateway
+        CreateOrders: 
+          Type: Api
+          Properties: 
+            Path: /orders
+            Method: POST
+      Policies: 
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersTable
+  
+  #Lambda definition
+  ReadOrderFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: order_api/
+      Handler: read.lambda_handler
+      # Runtime: python3.9
+      Events: # We use EVENTS to tell SAMs to configure API Gateway
+        ReadOrders: 
+          Type: Api
+          Properties: 
+            Path: /orders/{id}
+            Method: GET
+      
+      Policies: 
+        - DynamoDBReadPolicy:
+            TableName: !Ref OrdersTable
+
+
